@@ -46,11 +46,22 @@ export function BirthdaysSection({ users }: BirthdaysSectionProps) {
   const upcomingOnly = upcomingBirthdays.filter((user) => !user.isToday)
 
   const formatBirthday = (birthday: string) => {
-    return new Date(birthday).toLocaleDateString("es-ES", {
-      day: "numeric",
-      month: "long",
-    })
-  }
+  // Crear la fecha usando componentes para evitar problemas de zona horaria inicial
+  const [year, month, day] = birthday.split('-').map(Number);
+  // Meses en JavaScript son base 0 (0 para enero, 11 para diciembre)
+  // No necesitamos el año actual aquí, solo la fecha de nacimiento para formatear
+  const birthdayDate = new Date(year, month - 1, day);
+
+  // Formatear la fecha manualmente o usar toLocaleDateString con un objeto Date más fiable
+  // Opción 1: Formato manual (probado y fiable)
+  const monthNames = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+  const formattedDay = birthdayDate.getDate();
+  const formattedMonth = monthNames[birthdayDate.getMonth()];
+  return `${formattedDay} de ${formattedMonth}`;
+
+  
+}
+
 
   const handleSendCongrats = (user: BirthdayUser) => {
     if (congratsMessage.trim()) {

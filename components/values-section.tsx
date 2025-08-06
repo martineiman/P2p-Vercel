@@ -1,4 +1,5 @@
 import { Card } from "@/components/ui/card"
+import type { Value } from "@/lib/database" // Añade esta línea
 
 const corporateValues = [
   {
@@ -48,7 +49,13 @@ const corporateValues = [
   },
 ]
 
-export function ValuesSection() {
+interface ValuesSectionProps {
+  values: Value[];
+}
+
+
+export function ValuesSection({ values }: ValuesSectionProps) {
+
   return (
     <div>
       <div className="mb-8">

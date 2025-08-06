@@ -104,10 +104,12 @@ export interface User {
   id: number
   email: string
   name: string
-  avatar_url?: string
-  birthday?: string
-  department?: string
-  position?: string
+  avatar_url?: string | null // Añadir | null
+  birthday?: string | null // Añadir | null
+  department?: string | null // Añadir | null
+  position?: string | null // Añadir | null
+  area?: string | null // Añadir esta línea
+  team?: string | null // Añadir esta línea
   created_at: string
 }
 
@@ -238,24 +240,30 @@ export function createRecognition(senderId: number, recipientId: number, valueId
 }
 
 export function getRecognitions(): Recognition[] {
-  const stmt = db.prepare(`
-    SELECT 
-      r.*,
-      s.name as sender_name, s.avatar_url as sender_avatar,
-      rec.name as recipient_name, rec.avatar_url as recipient_avatar,
-      v.name as value_name, v.icon as value_icon, v.color as value_color,
-      COUNT(i.id) as likes
-    FROM recognitions r
-    JOIN users s ON r.sender_id = s.id
-    JOIN users rec ON r.recipient_id = rec.id
-    JOIN organization_values v ON r.value_id = v.id
-    LEFT JOIN interactions i ON r.id = i.recognition_id AND i.type = 'like'
-    GROUP BY r.id
-    ORDER BY r.created_at DESC
-  `)
+  try { // <-- Añadir try block
+    const stmt = db.prepare(`
+      SELECT
+        r.*,
+        s.name as sender_name, s.avatar_url as sender_avatar,
+        rec.name as recipient_name, rec.avatar_url as recipient_avatar,
+        v.name as value_name, v.icon as value_icon, v.color as value_color,
+        COUNT(i.id) as likes
+      FROM recognitions r
+      JOIN users s ON r.sender_id = s.id
+      JOIN users rec ON r.recipient_id = rec.id
+      JOIN organization_values v ON r.value_id = v.id
+      LEFT JOIN recognition_interactions i ON r.id = i.recognition_id AND i.type = 'like' -- Corregir possible tabla de interacciones
+      GROUP BY r.id
+      ORDER BY r.created_at DESC
+    `)
 
-  return stmt.all() as any[]
+    return stmt.all() as any[]
+  } catch (error) { // <-- Añadir catch block
+    console.error("Error in getRecognitions:", error); // <-- Loguear el error exacto
+    throw error; // Volver a lanzar el error para que sea capturado en la API route
+  }
 }
+
 
 export function addInteraction(userId: number, recognitionId: number, type: "like" | "comment", content?: string) {
   const stmt = db.prepare(`

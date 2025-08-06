@@ -1,13 +1,14 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import type { Recognition, User, Value } from "@/lib/database"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Heart, MessageCircle, Send } from "lucide-react"
+import type { Recognition, User, Value, Interaction } from "@/lib/database"
+
 
 interface UserAchievementsSectionProps {
   user: User
@@ -18,15 +19,30 @@ interface UserAchievementsSectionProps {
   onRefreshData: () => void
 }
 
-interface RecognitionWithInteractions extends Recognition {
-  likes: number
-  comments: Array<{
-    id: number
-    user_name: string
-    content: string
-    created_at: string
-  }>
-  isLiked: boolean
+interface LocalComment {
+  id: number;
+  user_name: string;
+  content: string;
+  created_at: string;
+}
+
+
+interface RecognitionWithInteractions {
+  // Propiedades de Recognition (ajustadas según la necesidad de la UI)
+  id: number;
+  sender_id: number;
+  recipient_id: number;
+  value_id: number;
+  message: string;
+  created_at: string;
+  sender?: User; // Propiedad opcional de Recognition
+  recipient?: User; // Propiedad opcional de Recognition
+  value?: Value; // Propiedad opcional de Recognition
+
+  // Propiedades adicionales para la UI
+  likes: number;
+  comments: LocalComment[]; // Usamos LocalComment[] aquí
+  isLiked: boolean;
 }
 
 export function UserAchievementsSection({

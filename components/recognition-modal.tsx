@@ -29,6 +29,7 @@ export function RecognitionModal({ users, values, currentUser, onClose, onSucces
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log("handleSubmit: Intentando enviar reconocimiento..."); // Log al inicio de handleSubmit
     setLoading(true)
 
     try {
@@ -45,14 +46,18 @@ export function RecognitionModal({ users, values, currentUser, onClose, onSucces
       })
 
       if (response.ok) {
+        console.log("handleSubmit: Reconocimiento enviado exitosamente. Llamando onSuccess..."); // Log antes de onSuccess
         onSuccess()
       } else {
         const data = await response.json()
+        console.error("handleSubmit: Error al enviar reconocimiento:", data.error); // Log de error al enviar
         alert(data.error || "Error al enviar reconocimiento")
       }
     } catch (error) {
+      console.error("handleSubmit: Error de conexión al enviar reconocimiento:", error); // Log de error de conexión
       alert("Error de conexión")
     } finally {
+      console.log("handleSubmit: Proceso de envío de reconocimiento finalizado."); // Log al final de handleSubmit
       setLoading(false)
     }
   }
