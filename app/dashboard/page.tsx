@@ -1,21 +1,23 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Loader2, Award, LogOut, Star, Crown, Activity, Dna, MedalIcon, Search, Cake } from "lucide-react"
-import { RecognitionModal } from "@/components/recognition-modal"
-import { MetricsSection } from "@/components/metrics-section"
-import { BirthdaysSection } from "@/components/birthdays-section"
-import { DestacadosSection } from "@/components/destacados-section"
-import { ValuesSection } from "@/components/values-section"
-import { ADNSection } from "@/components/adn-section"
-import { AchievementsSection } from "@/components/achievements-section"
-import { PeopleSearchSection } from "@/components/people-search-section"
-import { UserAchievementsSection } from "@/components/user-achievements-section"
-import type { User, Value, Recognition } from "@/lib/database"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Loader2, Award, LogOut, Star, Crown, Activity, Dna, MedalIcon, Search, Cake } from "lucide-react";
+import { RecognitionModal } from "@/components/recognition-modal";
+import { BirthdaysSection } from "@/components/birthdays-section";
+import { DestacadosSection } from "@/components/destacados-section";
+import { ValuesSection } from "@/components/values-section";
+import { ADNSection } from "@/components/adn-section";
+import { AchievementsSection } from "@/components/achievements-section";
+import { PeopleSearchSection } from "@/components/people-search-section";
+import { UserAchievementsSection } from "@/components/user-achievements-section";
+import type { User, Value, Recognition } from "@/lib/database";
+
+const MetricsSection = dynamic(() => import("@/components/metrics-section"), { ssr: false });
 
 interface DashboardStats {
   userStats: {
@@ -32,35 +34,35 @@ interface DashboardStats {
 }
 
 export default function DashboardPage() {
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
-  const [users, setUsers] = useState<User[]>([])
-  const [values, setValues] = useState<Value[]>([])
-  const [recognitions, setRecognitions] = useState<Recognition[]>([])
-  const [stats, setStats] = useState<DashboardStats | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [showRecognitionModal, setShowRecognitionModal] = useState(false)
-  const [activeSection, setActiveSection] = useState<string | null>(null)
-  const [selectedUser, setSelectedUser] = useState<User | null>(null)
-  const router = useRouter()
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [values, setValues] = useState<Value[]>([]);
+  const [recognitions, setRecognitions] = useState<Recognition[]>([]);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [showRecognitionModal, setShowRecognitionModal] = useState(false);
+  const [activeSection, setActiveSection] = useState<string | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
-    loadData()
-  }, [])
+    loadData();
+  }, []);
 
   const loadData = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
       const [usersRes, valuesRes, recognitionsRes, statsRes, currentUserRes] = await Promise.all([
         fetch("/api/users"),
         fetch("/api/values"),
         fetch("/api/recognitions"),
         fetch("/api/stats"),
-        fetch("/api/auth/me")
-      ])
+        fetch("/api/auth/me"),
+      ]);
 
       if (!usersRes.ok) {
-        router.push("/login")
-        return
+        router.push("/login");
+        return;
       }
 
       const [usersData, valuesData, recognitionsData, statsData, currentUserData] = await Promise.all([
@@ -68,124 +70,123 @@ export default function DashboardPage() {
         valuesRes.json(),
         recognitionsRes.json(),
         statsRes.json(),
-        currentUserRes.json()
-      ])
+        currentUserRes.json(),
+      ]);
 
-      const loadedRecognitions = Array.isArray(recognitionsData?.recognitions) ? recognitionsData.recognitions : []
-      const loadedUsers = Array.isArray(usersData?.users) ? usersData.users : []
-      const loadedCurrentUser = currentUserRes.ok ? currentUserData.user : null
+      const loadedRecognitions = Array.isArray(recognitionsData?.recognitions) ? recognitionsData.recognitions : [];
+      const loadedUsers = Array.isArray(usersData?.users) ? usersData.users : [];
+      const loadedCurrentUser = currentUserRes.ok ? currentUserData.user : null;
 
-      setUsers(loadedUsers)
-      setValues(Array.isArray(valuesData?.values) ? valuesData.values : [])
-      setRecognitions(loadedRecognitions)
+      setUsers(loadedUsers);
+      setValues(Array.isArray(valuesData?.values) ? valuesData.values : []);
+      setRecognitions(loadedRecognitions);
 
       if (loadedCurrentUser) {
-        const calculatedUserStats = getUserStats(loadedUsers, loadedRecognitions, loadedCurrentUser)
-        const calculatedMetricsStats = getMetricsStats(loadedUsers, loadedRecognitions)
-        setStats({ userStats: calculatedUserStats, metricsStats: calculatedMetricsStats })
-        // Convertir is_admin a booleano si es un número (0/1)
-        loadedCurrentUser.is_admin = !!loadedCurrentUser.is_admin
-        setCurrentUser(loadedCurrentUser)
-        console.log("loadData: Usuario actual cargado, es admin?", loadedCurrentUser.is_admin)
+        const calculatedUserStats = getUserStats(loadedUsers, loadedRecognitions, loadedCurrentUser);
+        const calculatedMetricsStats = getMetricsStats(loadedUsers, loadedRecognitions);
+        setStats({ userStats: calculatedUserStats, metricsStats: calculatedMetricsStats });
+        loadedCurrentUser.is_admin = !!loadedCurrentUser.is_admin;
+        setCurrentUser(loadedCurrentUser);
+        console.log("loadData: Usuario actual cargado, es admin?", loadedCurrentUser.is_admin);
       } else {
-        setStats({ userStats: { received: 0, sent: 0, valuesCount: 0, teammates: 0 }, metricsStats: null })
-        setCurrentUser(null)
+        setStats({ userStats: { received: 0, sent: 0, valuesCount: 0, teammates: 0 }, metricsStats: null });
+        setCurrentUser(null);
       }
     } catch (error) {
-      console.error("loadData: Error al cargar datos:", error)
-      router.push("/login")
+      console.error("loadData: Error al cargar datos:", error);
+      router.push("/login");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const getUserStats = (allUsers: User[], allRecognitions: Recognition[], currentUser: User) => {
     if (!currentUser) {
-      return { received: 0, sent: 0, valuesCount: 0, teammates: 0 }
+      return { received: 0, sent: 0, valuesCount: 0, teammates: 0 };
     }
 
-    const received = allRecognitions.filter((r: Recognition) => r.recipient_id === currentUser.id).length
-    const sent = allRecognitions.filter((r: Recognition) => r.sender_id === currentUser.id).length
+    const received = allRecognitions.filter((r: Recognition) => r.recipient_id === currentUser.id).length;
+    const sent = allRecognitions.filter((r: Recognition) => r.sender_id === currentUser.id).length;
 
-    const userRecognitions = allRecognitions.filter((r: Recognition) => r.recipient_id === currentUser.id)
-    const valuesCount = new Set(userRecognitions.map((r: Recognition) => r.value_id)).size
+    const userRecognitions = allRecognitions.filter((r: Recognition) => r.recipient_id === currentUser.id);
+    const valuesCount = new Set(userRecognitions.map((r: Recognition) => r.value_id)).size;
 
-    const teammates = allUsers.filter((u: User) => u.team === currentUser.team && u.id !== currentUser.id).length
+    const teammates = allUsers.filter((u: User) => u.team === currentUser.team && u.id !== currentUser.id).length;
 
-    return { received, sent, valuesCount, teammates }
-  }
+    return { received, sent, valuesCount, teammates };
+  };
 
   const getMetricsStats = (allUsers: User[], allRecognitions: Recognition[]) => {
-    const totalUsers = allUsers.length
+    const totalUsers = allUsers.length;
     const activeUsers = new Set([
       ...allRecognitions.map((r: Recognition) => r.sender_id),
       ...allRecognitions.map((r: Recognition) => r.recipient_id),
-    ]).size
-    const participationRate = totalUsers > 0 ? Math.round((activeUsers / totalUsers) * 100) : null
+    ]).size;
+    const participationRate = totalUsers > 0 ? Math.round((activeUsers / totalUsers) * 100) : null;
 
-    const growthRate = 23
+    const growthRate = 23;
 
-    const totalRecognitions = allRecognitions.length
+    const totalRecognitions = allRecognitions.length;
 
-    return { participationRate, growthRate, totalRecognitions }
-  }
+    return { participationRate, growthRate, totalRecognitions };
+  };
 
   const handleLogout = async () => {
     try {
-      await fetch("/api/auth/logout", { method: "POST" })
-      router.push("/login")
+      await fetch("/api/auth/logout", { method: "POST" });
+      router.push("/login");
     } catch (error) {
-      console.error("handleLogout: Error al cerrar sesión:", error)
+      console.error("handleLogout: Error al cerrar sesión:", error);
     }
-  }
+  };
 
   const getUpcomingBirthdays = () => {
-    const today = new Date()
+    const today = new Date();
 
     const upcoming = users
       .filter((user) => user.birthday)
       .map((user) => {
-        const [year, month, day] = user.birthday!.split('-').map(Number)
-        const birthdayThisYear = new Date(today.getFullYear(), month - 1, day)
-        const comparisonToday = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+        const [year, month, day] = user.birthday!.split("-").map(Number);
+        const birthdayThisYear = new Date(today.getFullYear(), month - 1, day);
+        const comparisonToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
         if (birthdayThisYear < comparisonToday) {
-          birthdayThisYear.setFullYear(today.getFullYear() + 1)
+          birthdayThisYear.setFullYear(today.getFullYear() + 1);
         }
 
-        const daysUntil = Math.ceil((birthdayThisYear.getTime() - comparisonToday.getTime()) / (1000 * 60 * 60 * 24))
+        const daysUntil = Math.ceil((birthdayThisYear.getTime() - comparisonToday.getTime()) / (1000 * 60 * 60 * 24));
 
-        return { ...user, daysUntil, birthdayDateObject: birthdayThisYear }
+        return { ...user, daysUntil, birthdayDateObject: birthdayThisYear };
       })
-      .sort((a, b) => a.daysUntil - b.daysUntil)
+      .sort((a, b) => a.daysUntil - b.daysUntil);
 
-    return upcoming
-  }
+    return upcoming;
+  };
 
   const openSection = (section: string) => {
-    setActiveSection(section)
-  }
+    setActiveSection(section);
+  };
 
   const closeSection = () => {
-    setActiveSection(null)
-    setSelectedUser(null)
-  }
+    setActiveSection(null);
+    setSelectedUser(null);
+  };
 
   const handleViewUserAchievements = (user: User) => {
-    setSelectedUser(user)
-    setActiveSection("user-achievements")
-  }
+    setSelectedUser(user);
+    setActiveSection("user-achievements");
+  };
 
   if (loading || !stats || !currentUser) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
       </div>
-    )
+    );
   }
 
-  const { userStats, metricsStats } = stats
-  const upcomingBirthdays = getUpcomingBirthdays()
+  const { userStats, metricsStats } = stats;
+  const upcomingBirthdays = getUpcomingBirthdays();
 
   if (activeSection) {
     return (
@@ -233,11 +234,31 @@ export default function DashboardPage() {
           {activeSection === "destacados" && (
             <DestacadosSection medals={recognitions} users={users} onViewAchievements={handleViewUserAchievements} />
           )}
-          {activeSection === "metrics" && <MetricsSection medals={recognitions} users={users} currentUser={currentUser!} />}
+          {activeSection === "metrics" && (
+            <MetricsSection
+              medals={recognitions}
+              users={users}
+              currentUser={currentUser!}
+              onFilterChange={(filterData) => {
+                const filteredRecognitions = filterData.filteredRecognitions;
+                const filteredUsers = filterData.filteredUsers;
+                const calculatedMetricsStats = getMetricsStats(filteredUsers, filteredRecognitions);
+                setStats((prev) => (prev ? { ...prev, metricsStats: calculatedMetricsStats } : null));
+              }}
+            />
+          )}
           {activeSection === "values" && <ValuesSection values={values} />}
-          {activeSection === "adn" && <ADNSection medals={recognitions} currentUser={currentUser!} values={values} users={users} />}
+          {activeSection === "adn" && (
+            <ADNSection medals={recognitions} currentUser={currentUser!} values={values} users={users} />
+          )}
           {activeSection === "achievements" && (
-            <AchievementsSection medals={recognitions} currentUser={currentUser!} users={users} values={values} onRefreshData={loadData} />
+            <AchievementsSection
+              medals={recognitions}
+              currentUser={currentUser!}
+              users={users}
+              values={values}
+              onRefreshData={loadData}
+            />
           )}
           {activeSection === "search" && (
             <PeopleSearchSection
@@ -260,7 +281,7 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -274,7 +295,6 @@ export default function DashboardPage() {
               </div>
               <h1 className="text-xl font-bold text-gray-900">Reconocimientos</h1>
             </div>
-
             <div className="flex items-center space-x-4">
               {currentUser && (
                 <div className="flex items-center space-x-3">
@@ -301,9 +321,7 @@ export default function DashboardPage() {
           </div>
         </div>
       </header>
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Cards - Fila superior con colores específicos */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card className="bg-gradient-to-br from-orange-500 to-orange-600 text-white border-0">
             <CardContent className="p-6 text-center">
@@ -311,21 +329,18 @@ export default function DashboardPage() {
               <div className="text-orange-100 font-medium">Reconocimientos Recibidos</div>
             </CardContent>
           </Card>
-
           <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white border-0">
             <CardContent className="p-6 text-center">
               <div className="text-4xl font-extrabold mb-2">{stats.userStats.sent}</div>
               <div className="text-green-100 font-medium">Reconocimientos Dados</div>
             </CardContent>
           </Card>
-
           <Card className="bg-gradient-to-br from-amber-500 to-amber-600 text-white border-0">
             <CardContent className="p-6 text-center">
               <div className="text-4xl font-extrabold mb-2">{stats.userStats.valuesCount}</div>
               <div className="text-amber-100 font-medium">Valores Reconocidos</div>
             </CardContent>
           </Card>
-
           <Card className="bg-gradient-to-br from-red-500 to-red-600 text-white border-0">
             <CardContent className="p-6 text-center">
               <div className="text-4xl font-extrabold mb-2">{stats.userStats.teammates}</div>
@@ -333,10 +348,7 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
-
-        {/* Sections Grid - Cuadrícula de 8 tarjetas funcionales con ajuste dinámico */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 auto-rows-min">
-          {/* Cumpleaños */}
           <div
             className="bg-white rounded-xl p-4 shadow-lg border border-gray-100 transition-all hover:shadow-xl hover:translate-y-[-4px] cursor-pointer relative overflow-hidden"
             onClick={() => openSection("birthdays")}
@@ -364,11 +376,11 @@ export default function DashboardPage() {
                       {upcomingBirthdays[0].birthdayDateObject && (
                         <div className="text-[10px] text-gray-600">
                           {(() => {
-                            const birthdayDate = upcomingBirthdays[0].birthdayDateObject
-                            const day = birthdayDate.getDate()
-                            const monthNames = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
-                            const month = monthNames[birthdayDate.getMonth()]
-                            return `${day} de ${month}`
+                            const birthdayDate = upcomingBirthdays[0].birthdayDateObject;
+                            const day = birthdayDate.getDate();
+                            const monthNames = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+                            const month = monthNames[birthdayDate.getMonth()];
+                            return `${day} de ${month}`;
                           })()}
                         </div>
                       )}
@@ -385,8 +397,6 @@ export default function DashboardPage() {
               )}
             </div>
           </div>
-
-          {/* Destacados */}
           <div
             className="bg-white rounded-xl p-4 shadow-lg border border-gray-100 transition-all hover:shadow-xl hover:translate-y-[-4px] cursor-pointer relative overflow-hidden"
             onClick={() => openSection("destacados")}
@@ -400,8 +410,6 @@ export default function DashboardPage() {
               <div className="text-xs text-gray-600">Los más reconocidos del mes</div>
             </div>
           </div>
-
-          {/* Valores */}
           <div
             className="bg-white rounded-xl p-4 shadow-lg border border-gray-100 transition-all hover:shadow-xl hover:translate-y-[-4px] cursor-pointer relative overflow-hidden"
             onClick={() => openSection("values")}
@@ -422,8 +430,6 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
-
-          {/* ADN */}
           <div
             className="bg-white rounded-xl p-4 shadow-lg border border-gray-100 transition-all hover:shadow-xl hover:translate-y-[-4px] cursor-pointer relative overflow-hidden"
             onClick={() => openSection("adn")}
@@ -437,8 +443,6 @@ export default function DashboardPage() {
               <div className="text-xs text-gray-600">Tu perfil de valores y el de tu equipo</div>
             </div>
           </div>
-
-          {/* Logros */}
           <div
             className="bg-white rounded-xl p-4 shadow-lg border border-gray-100 transition-all hover:shadow-xl hover:translate-y-[-4px] cursor-pointer relative overflow-hidden"
             onClick={() => openSection("achievements")}
@@ -454,8 +458,6 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
-
-          {/* Búsqueda */}
           <div
             className="bg-white rounded-xl p-4 shadow-lg border border-gray-100 transition-all hover:shadow-xl hover:translate-y-[-4px] cursor-pointer relative overflow-hidden"
             onClick={() => openSection("search")}
@@ -469,8 +471,6 @@ export default function DashboardPage() {
               <div className="text-xs text-gray-600">Explora perfiles y logros</div>
             </div>
           </div>
-
-          {/* Reconocimiento */}
           <div
             className="bg-white rounded-xl p-4 shadow-lg border border-gray-100 transition-all hover:shadow-xl hover:translate-y-[-4px] cursor-pointer relative overflow-hidden"
             onClick={() => setShowRecognitionModal(true)}
@@ -484,8 +484,6 @@ export default function DashboardPage() {
               <div className="text-xs text-gray-600">Envía un reconocimiento</div>
             </div>
           </div>
-
-          {/* Métricas - Solo visible para administradores con datos válidos */}
           {currentUser?.is_admin && stats?.metricsStats && (
             <div
               className="bg-white rounded-xl p-4 shadow-lg border border-gray-100 transition-all hover:shadow-xl hover:translate-y-[-4px] cursor-pointer relative overflow-hidden"
@@ -528,22 +526,20 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
-
-      {/* Recognition Modal */}
       {showRecognitionModal && (
         <RecognitionModal
           users={users}
           values={values}
           currentUser={currentUser}
           onClose={() => {
-            setShowRecognitionModal(false)
+            setShowRecognitionModal(false);
           }}
           onSuccess={() => {
-            setShowRecognitionModal(false)
-            loadData()
+            setShowRecognitionModal(false);
+            loadData();
           }}
         />
       )}
     </div>
-  )
+  );
 }

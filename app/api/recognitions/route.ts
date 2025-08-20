@@ -1,55 +1,31 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { createRecognition, getRecognitions, getSessionUser } from "@/lib/database"
-import { cookies } from "next/headers"
+import { type NextRequest, NextResponse } from "next/server";
+import { getRecognitions, getSessionUser } from "@/lib/database";
+import { cookies } from "next/headers";
 
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const sessionId = cookieStore.get("session")?.value
+    console.log("Processing /api/recognitions request");
+    const cookieStore = await cookies();
+    const sessionId = cookieStore.get("session")?.value;
 
+    console.log("Session ID:", sessionId);
     if (!sessionId) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+      console.log("No session ID found");
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    const user = getSessionUser(sessionId)
+    const user = getSessionUser(sessionId);
+    console.log("Session user:", user);
     if (!user) {
-      return NextResponse.json({ error: "Sesión inválida" }, { status: 401 })
+      console.log("Invalid session");
+      return NextResponse.json({ error: "Sesión inválida" }, { status: 401 });
     }
 
-    const recognitions = getRecognitions()
-    return NextResponse.json({ recognitions })
+    const recognitions = getRecognitions();
+    console.log("Recognitions retrieved:", recognitions);
+    return NextResponse.json({ recognitions });
   } catch (error) {
-    return NextResponse.json({ error: "Error al obtener reconocimientos" }, { status: 500 })
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const cookieStore = await cookies()
-    const sessionId = cookieStore.get("session")?.value
-
-    if (!sessionId) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
-    }
-
-    const user = getSessionUser(sessionId)
-    if (!user) {
-      return NextResponse.json({ error: "Sesión inválida" }, { status: 401 })
-    }
-
-    const { recipientId, valueId, message } = await request.json()
-
-    if (!recipientId || !valueId || !message) {
-      return NextResponse.json({ error: "Todos los campos son requeridos" }, { status: 400 })
-    }
-
-    const recognitionId = createRecognition(user.id, recipientId, valueId, message)
-
-    return NextResponse.json({
-      success: true,
-      recognitionId,
-    })
-  } catch (error) {
-    return NextResponse.json({ error: "Error al crear reconocimiento" }, { status: 500 })
+    console.error("Error in /api/recognitions:", error);
+    return NextResponse.json({ error: "Error al obtener reconocimientos: " + (error.message || error) }, { status: 500 });
   }
 }

@@ -1,24 +1,31 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { getAllUsers, getSessionUser } from "@/lib/database"
-import { cookies } from "next/headers"
+import { type NextRequest, NextResponse } from "next/server";
+import { getAllUsers, getSessionUser } from "@/lib/database";
+import { cookies } from "next/headers";
 
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies()
-    const sessionId = cookieStore.get("session")?.value
+    console.log("Processing /api/users request");
+    const cookieStore = await cookies();
+    const sessionId = cookieStore.get("session")?.value;
 
+    console.log("Session ID:", sessionId);
     if (!sessionId) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+      console.log("No session ID found");
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    const user = getSessionUser(sessionId)
+    const user = getSessionUser(sessionId);
+    console.log("Session user:", user);
     if (!user) {
-      return NextResponse.json({ error: "Sesión inválida" }, { status: 401 })
+      console.log("Invalid session");
+      return NextResponse.json({ error: "Sesión inválida" }, { status: 401 });
     }
 
-    const users = getAllUsers()
-    return NextResponse.json({ users })
+    const users = getAllUsers();
+    console.log("Users retrieved:", users);
+    return NextResponse.json({ users });
   } catch (error) {
-    return NextResponse.json({ error: "Error al obtener usuarios" }, { status: 500 })
+    console.error("Error in /api/users:", error);
+    return NextResponse.json({ error: "Error al obtener usuarios: " + (error.message || error) }, { status: 500 });
   }
 }

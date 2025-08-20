@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="" readonly="0" foreign_keys="" case_sensitive_like="" temp_store="" wal_autocheckpoint="" synchronous=""/><attached/><window><main_tabs open="structure browser pragmas query" current="3"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="100"/><column_width id="3" width="5534"/><column_width id="4" width="0"/></tab_structure><tab_browse><table title="." custom_title="0" dock_id="5" table="0,0:"/><dock_state state="000000ff00000000fd00000001000000020000000000000000fc0100000005fb000000160064006f0063006b00420072006f00770073006500310100000000ffffffff0000000000000000fb000000160064006f0063006b00420072006f00770073006500320100000000ffffffff0000000000000000fb000000160064006f0063006b00420072006f00770073006500330100000000ffffffff0000000000000000fb000000160064006f0063006b00420072006f00770073006500340100000000ffffffff0000000000000000fb000000160064006f0063006b00420072006f00770073006500350100000000ffffffff0000011800ffffff000000000000000000000004000000040000000800000008fc00000000"/><default_encoding codec=""/><browse_table_settings/></tab_browse><tab_sql><sql name="SQL 3*">BEGIN TRANSACTION;
+
+-- Tabla de Sucursales (Branches) - Nivel raíz
+CREATE TABLE IF NOT EXISTS &quot;branches&quot; (
+    &quot;id&quot; INTEGER PRIMARY KEY AUTOINCREMENT,
+    &quot;name&quot; TEXT NOT NULL UNIQUE
+);
+
+-- Tabla de Áreas - Pertenecen a una Sucursal
+CREATE TABLE IF NOT EXISTS &quot;areas&quot; (
+    &quot;id&quot; INTEGER PRIMARY KEY AUTOINCREMENT,
+    &quot;name&quot; TEXT NOT NULL,
+    &quot;branch_id&quot; INTEGER NOT NULL,
+    FOREIGN KEY (&quot;branch_id&quot;) REFERENCES &quot;branches&quot;(&quot;id&quot;) ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- Tabla de Departamentos - Pertenecen a un Área
+CREATE TABLE IF NOT EXISTS &quot;departments&quot; (
+    &quot;id&quot; INTEGER PRIMARY KEY AUTOINCREMENT,
+    &quot;name&quot; TEXT NOT NULL,
+    &quot;area_id&quot; INTEGER NOT NULL,
+    FOREIGN KEY (&quot;area_id&quot;) REFERENCES &quot;areas&quot;(&quot;id&quot;) ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- Tabla de Equipos (Teams) - Pertenecen a un Departamento
+CREATE TABLE IF NOT EXISTS &quot;teams&quot; (
+    &quot;id&quot; INTEGER PRIMARY KEY AUTOINCREMENT,
+    &quot;name&quot; TEXT NOT NULL,
+    &quot;department_id&quot; INTEGER NOT NULL,
+    FOREIGN KEY (&quot;department_id&quot;) REFERENCES &quot;departments&quot;(&quot;id&quot;) ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+-- Tabla de Usuarios - Pertenecen opcionalmente a Branch, Area, Department, Team (IDs directos para flexibilidad)
+CREATE TABLE IF NOT EXISTS &quot;users&quot; (
+    &quot;id&quot; INTEGER PRIMARY KEY AUTOINCREMENT,
+    &quot;email&quot; TEXT NOT NULL UNIQUE,
+    &quot;password&quot; TEXT NOT NULL,
+    &quot;name&quot; TEXT NOT NULL,
+    &quot;avatar_url&quot; TEXT,
+    &quot;birthday&quot; DATE,
+    &quot;position&quot; TEXT,  -- Mantenido, ya que es específico del usuario
+    &quot;is_admin&quot; BOOLEAN DEFAULT 0,
+    &quot;created_at&quot; DATETIME DEFAULT CURRENT_TIMESTAMP,
+    &quot;updated_at&quot; DATETIME DEFAULT CURRENT_TIMESTAMP,
+    &quot;branch_id&quot; INTEGER,  -- Opcional: NULL si no asignado
+    &quot;area_id&quot; INTEGER,
+    &quot;department_id&quot; INTEGER,
+    &quot;team_id&quot; INTEGER,
+    FOREIGN KEY (&quot;branch_id&quot;) REFERENCES &quot;branches&quot;(&quot;id&quot;) ON DELETE SET NULL ON UPDATE CASCADE,
+    FOREIGN KEY (&quot;area_id&quot;) REFERENCES &quot;areas&quot;(&quot;id&quot;) ON DELETE SET NULL ON UPDATE CASCADE,
+    FOREIGN KEY (&quot;department_id&quot;) REFERENCES &quot;departments&quot;(&quot;id&quot;) ON DELETE SET NULL ON UPDATE CASCADE,
+    FOREIGN KEY (&quot;team_id&quot;) REFERENCES &quot;teams&quot;(&quot;id&quot;) ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+-- Tabla de Valores Organizacionales (sin cambios)
+CREATE TABLE IF NOT EXISTS &quot;organization_values&quot; (
+    &quot;id&quot; INTEGER PRIMARY KEY AUTOINCREMENT,
+    &quot;name&quot; TEXT NOT NULL,
+    &quot;description&quot; TEXT,
+    &quot;icon&quot; TEXT,
+    &quot;color&quot; TEXT,
+    &quot;created_at&quot; DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabla de Reconocimientos (sin cambios, referencia a users y values)
+CREATE TABLE IF NOT EXISTS &quot;recognitions&quot; (
+    &quot;id&quot; INTEGER PRIMARY KEY AUTOINCREMENT,
+    &quot;sender_id&quot; INTEGER NOT NULL,
+    &quot;recipient_id&quot; INTEGER NOT NULL,
+    &quot;value_id&quot; INTEGER NOT NULL,
+    &quot;message&quot; TEXT NOT NULL,
+    &quot;created_at&quot; DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (&quot;sender_id&quot;) REFERENCES &quot;users&quot;(&quot;id&quot;) ON DELETE CASCADE,
+    FOREIGN KEY (&quot;recipient_id&quot;) REFERENCES &quot;users&quot;(&quot;id&quot;) ON DELETE CASCADE,
+    FOREIGN KEY (&quot;value_id&quot;) REFERENCES &quot;organization_values&quot;(&quot;id&quot;) ON DELETE RESTRICT
+);
+
+-- Tabla de Interacciones en Reconocimientos (sin cambios)
+CREATE TABLE IF NOT EXISTS &quot;recognition_interactions&quot; (
+    &quot;id&quot; INTEGER PRIMARY KEY AUTOINCREMENT,
+    &quot;recognition_id&quot; INTEGER NOT NULL,
+    &quot;user_id&quot; INTEGER NOT NULL,
+    &quot;type&quot; TEXT NOT NULL CHECK(&quot;type&quot; IN ('like', 'comment')),
+    &quot;content&quot; TEXT,
+    &quot;created_at&quot; DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (&quot;recognition_id&quot;) REFERENCES &quot;recognitions&quot;(&quot;id&quot;) ON DELETE CASCADE,
+    FOREIGN KEY (&quot;user_id&quot;) REFERENCES &quot;users&quot;(&quot;id&quot;) ON DELETE CASCADE
+);
+
+-- Tabla de Sesiones (sin cambios)
+CREATE TABLE IF NOT EXISTS &quot;sessions&quot; (
+    &quot;id&quot; TEXT PRIMARY KEY,
+    &quot;user_id&quot; INTEGER NOT NULL,
+    &quot;expires_at&quot; DATETIME NOT NULL,
+    &quot;created_at&quot; DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (&quot;user_id&quot;) REFERENCES &quot;users&quot;(&quot;id&quot;) ON DELETE CASCADE
+);
+
+-- Índices para mejorar rendimiento en consultas frecuentes
+CREATE INDEX IF NOT EXISTS idx_users_branch_id ON &quot;users&quot;(&quot;branch_id&quot;);
+CREATE INDEX IF NOT EXISTS idx_users_area_id ON &quot;users&quot;(&quot;area_id&quot;);
+CREATE INDEX IF NOT EXISTS idx_users_department_id ON &quot;users&quot;(&quot;department_id&quot;);
+CREATE INDEX IF NOT EXISTS idx_users_team_id ON &quot;users&quot;(&quot;team_id&quot;);
+CREATE INDEX IF NOT EXISTS idx_recognitions_sender_id ON &quot;recognitions&quot;(&quot;sender_id&quot;);
+CREATE INDEX IF NOT EXISTS idx_recognitions_recipient_id ON &quot;recognitions&quot;(&quot;recipient_id&quot;);
+CREATE INDEX IF NOT EXISTS idx_areas_branch_id ON &quot;areas&quot;(&quot;branch_id&quot;);
+CREATE INDEX IF NOT EXISTS idx_departments_area_id ON &quot;departments&quot;(&quot;area_id&quot;);
+CREATE INDEX IF NOT EXISTS idx_teams_department_id ON &quot;teams&quot;(&quot;department_id&quot;);
+
+COMMIT;</sql><sql name="SQL 5*">-- Script para poblar la base de datos con datos de ejemplo
+-- Asegúrate de ejecutar esto después de crear las tablas (usa el esquema proporcionado previamente).
+-- Los datos están inspirados en los originales, pero ajustados a la nueva jerarquía:
+-- Branches → Areas → Departments → Teams → Users
+
+-- Poblar Branches (Sucursales)
+INSERT INTO &quot;branches&quot; (&quot;name&quot;) VALUES
+    ('Sucursal Principal'),
+    ('25 de Mayo'),
+    ('Saenz Peña'),
+    ('Villa Angela');
+
+-- Poblar Areas (Áreas) - Asociadas a Branches
+INSERT INTO &quot;areas&quot; (&quot;name&quot;, &quot;branch_id&quot;) VALUES
+    ('Tecnología', 1),
+    ('Comercial', 1),
+    ('Recursos Humanos', 1),
+    ('Sistemas', 2),
+    ('Ventas', 3),
+    ('Marketing', 4);
+
+-- Poblar Departments (Departamentos) - Asociados a Areas
+INSERT INTO &quot;departments&quot; (&quot;name&quot;, &quot;area_id&quot;) VALUES
+    ('IT', 1),
+    ('Infraestructura', 1),
+    ('Ventas', 2),
+    ('Marketing', 2),
+    ('Gestión de Talento', 3),
+    ('Sistemas', 4),
+    ('Ventas Norte', 5),
+    ('Marketing Digital', 6);
+
+-- Poblar Teams (Equipos) - Asociados a Departments
+INSERT INTO &quot;teams&quot; (&quot;name&quot;, &quot;department_id&quot;) VALUES
+    ('Arquitectura', 1),
+    ('Desarrollo', 1),
+    ('Ventas Norte', 3),
+    ('Marketing Digital', 4),
+    ('Gestión de Talento', 5),
+    ('Infraestructura', 2),
+    ('Ventas Norte', 7),
+    ('Marketing Digital', 8);
+
+-- Poblar Users (Usuarios) - Asociados a Branch, Area, Department, Team
+INSERT INTO &quot;users&quot; (&quot;email&quot;, &quot;password&quot;, &quot;name&quot;, &quot;avatar_url&quot;, &quot;birthday&quot;, &quot;position&quot;, &quot;is_admin&quot;, &quot;branch_id&quot;, &quot;area_id&quot;, &quot;department_id&quot;, &quot;team_id&quot;) VALUES
+    ('admin@company.com', '$2b$10$mdKLPDwYu67Q.zDdNzW20O2RGtt1tZJcww7sJpUR7zlb2Kvs2oMNq', 'Administrador Sistema', NULL, '1985-03-15', 'System Admin', 1, 1, 1, 1, 1),
+    ('maria.garcia@company.com', '$2b$10$GdNuSS3cqMzgSY6Laq31VOm5stsW17zlJi2A7Zwo3kNiGA9MTg9EW', 'María García', NULL, '1990-12-25', 'Desarrolladora Senior', 0, 1, 1, 1, 2),
+    ('carlos.lopez@company.com', '$2b$10$J8aQX1wgEuLiA3JvOEs.beNEBswHXVh4B4CsjMEgf4zkUr8JEDjCO', 'Carlos López', NULL, '1988-01-01', 'Gerente de Ventas', 0, 1, 2, 3, 3),
+    ('ana.martinez@company.com', '$2b$10$pLaRWS1KuuJM2kPJWICDWujdTpAR2z7NnzWLbC9XaDAdRYa/hs9NS', 'Ana Martínez', NULL, '1992-07-20', 'Especialista en Marketing', 0, 1, 2, 4, 4),
+    ('luis.rodriguez@company.com', '$2b$10$3JxxmGf/oI7oO2QC4damYOWD6JgjEsmpJ8HwsI6vyqqqYGvqf5aye', 'Luis Rodríguez', NULL, '1987-11-30', 'DevOps Engineer', 0, 1, 1, 2, 6),
+    ('sofia.hernandez@company.com', '$2b$10$tUKidft54VhkpWkJUuGNV.xz/WFsxmaceY8mskhb1Op8JBntwULiO', 'Sofía Hernández', NULL, '1991-06-15', 'Coordinadora de RRHH', 0, 1, 3, 5, 5);
+
+-- Poblar Organization Values (Valores Organizacionales)
+INSERT INTO &quot;organization_values&quot; (&quot;name&quot;, &quot;description&quot;, &quot;icon&quot;, &quot;color&quot;, &quot;created_at&quot;) VALUES
+    ('Innovación', 'Buscar nuevas formas de hacer las cosas', '💡', '#3B82F6', '2025-08-05 14:17:36'),
+    ('Colaboración', 'Trabajar juntos hacia objetivos comunes', '🤝', '#10B981', '2025-08-05 14:17:36'),
+    ('Excelencia', 'Buscar la calidad en todo lo que hacemos', '⭐', '#F59E0B', '2025-08-05 14:17:36'),
+    ('Integridad', 'Actuar con honestidad y transparencia', '🛡️', '#8B5CF6', '2025-08-05 14:17:36'),
+    ('Liderazgo', 'Inspirar y guiar a otros', '👑', '#EF4444', '2025-08-05 14:17:36'),
+    ('Compromiso', 'Dedicación y responsabilidad', '💪', '#06B6D4', '2025-08-05 14:17:36');
+
+-- Poblar Recognitions (Reconocimientos)
+INSERT INTO &quot;recognitions&quot; (&quot;sender_id&quot;, &quot;recipient_id&quot;, &quot;value_id&quot;, &quot;message&quot;, &quot;created_at&quot;) VALUES
+    (2, 3, 2, 'Excelente trabajo en el proyecto de la nueva plataforma. Tu colaboración fue clave para el éxito.', '2025-08-05 14:26:01'),
+    (3, 4, 1, 'Tu propuesta de automatización ahorró muchas horas de trabajo manual.', '2025-08-05 14:26:01'),
+    (4, 5, 2, 'Siempre dispuesto a ayudar al equipo cuando más lo necesitamos.', '2025-08-05 14:26:01'),
+    (5, 2, 3, 'Tu código siempre es impecable y bien documentado.', '2025-08-05 14:26:01'),
+    (6, 3, 5, 'Excelente liderazgo durante la crisis del proyecto Q4.', '2025-08-05 14:26:01'),
+    (1, 5, 6, 'gracias por estar siempre incluso fuera del horario laboral', '2025-08-05 17:00:09'),
+    (2, 5, 2, 'ndlaNLQNFLCQANLFNWLFNWELNFEW', '2025-08-05 17:03:55'),
+    (2, 5, 2, 'sgvdaffdfs', '2025-08-05 17:21:24'),
+    (2, 6, 4, 'jjrjyrjryjrj5yj55j5yjjy5', '2025-08-05 17:46:22'),
+    (2, 1, 6, 'jmtjktjtjty', '2025-08-05 17:48:41'),
+    (2, 3, 5, 'kytku', '2025-08-05 18:01:43'),
+    (2, 4, 2, 'bbbbbbbbbbbbbbbbbbbbbbbbbbb', '2025-08-06 12:19:59'),
+    (2, 6, 1, 'jjjjjjjj', '2025-08-06 12:35:26'),
+    (2, 5, 4, 'ggggggg', '2025-08-06 12:52:14'),
+    (2, 3, 6, 'dsdsdsd', '2025-08-06 13:48:30'),
+    (2, 1, 2, 'cvbssdvsvsdv', '2025-08-06 13:51:05'),
+    (1, 2, 5, 'ññññññññññ', '2025-08-06 13:59:40'),
+    (2, 1, 3, 'lalalalalalalala', '2025-08-06 14:11:58');
+
+-- Poblar Recognition Interactions (Interacciones)
+INSERT INTO &quot;recognition_interactions&quot; (&quot;recognition_id&quot;, &quot;user_id&quot;, &quot;type&quot;, &quot;content&quot;, &quot;created_at&quot;) VALUES
+    (1, 3, 'like', NULL, '2025-08-05 14:30:00'),
+    (1, 4, 'comment', '¡Totalmente de acuerdo!', '2025-08-05 14:35:00'),
+    (2, 5, 'like', NULL, '2025-08-05 14:40:00');
+
+-- Poblar Sessions (Sesiones)
+INSERT INTO &quot;sessions&quot; (&quot;id&quot;, &quot;user_id&quot;, &quot;expires_at&quot;, &quot;created_at&quot;) VALUES
+    ('7c7b4db06144b51327fa61bfed752ff9d95ded7ea90524db68c58cfbaee70be5', 1, '2025-08-12T14:28:55.396Z', '2025-08-05 14:28:55'),
+    ('17fffe42476def1867dad7623456ccbab3d98b693a62af37742f32ed567ded94', 1, '2025-08-12T14:35:36.645Z', '2025-08-05 14:35:36'),
+    ('fe79cdc8b9fd31279d97103c4e23a043a52539fd61b1a6d3fce2f24f0646c4dc', 1, '2025-08-12T14:36:05.211Z', '2025-08-05 14:36:05'),
+    ('a69c6e6cc5adf9e7e2f1daa112316ccd2b2fe0cb785ef5d3e66c5174155d7434', 1, '2025-08-12T16:57:06.387Z', '2025-08-05 16:57:06'),
+    ('2fabaf1c1cc43efb9fd09a86c0b0a350634a857a5296f7b5b5c4811f394582a1', 2, '2025-08-13T17:14:12.529Z', '2025-08-06 17:14:12'),
+    ('61fce2b89d22c5b9d62d83504321d1262d47601772ed557d1e9a471b423ee2e1', 1, '2025-08-18T18:06:56.880Z', '2025-08-11 18:06:56');</sql><sql name="SQL 4*">select * from users
+
+select * from branches
+
+select * from areas
+
+insert into areas values
+	(7,'Sistemas',1)
+	------------------------------------------------
+select * from departments
+
+insert into departments values
+	--(11,'Tecnología y Producción',7)
+	(12,'Gestión de la demanda',7)
+	
+update departments
+	set name = 'Seguridad Informática'
+	where name = 'Gestión de la demanda'
+	
+	---------------------------------------------------
+	
+select * from teams 
+
+insert into teams values
+	--(11,'Diseño',9)
+	(12,'PAI',12),
+	(13,'Implementaciones',11),
+	(14,'Operaciones',11)
+	</sql><sql name="SQL 6*">select * from departments
+</sql><sql name="SQL 7*">select * from users</sql><current_tab id="4"/></tab_sql></sqlb_project>
